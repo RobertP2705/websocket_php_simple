@@ -1,6 +1,6 @@
 # WebSocket Chat Server
 
-NO HEAVY WEBSOCKET LIBRARY REQUIRED. A lightweight, production-ready WebSocket server implementation in PHP 8 for real-time communication. Under the hood we are doing a reverse proxy (Apache) from https to localhost and down-grading the wss connection to simplify requirements for the connection.
+NO HEAVY WEBSOCKET LIBRARY REQUIRED. A lightweight, production-ready WebSocket server implementation in PHP 8 for real-time communication. Under the hood we are doing a reverse proxy (Apache) from https to localhost and down-grading the wss connection to simplify requirements for the connection. Has chat.php to test out chat feature but any bidirectional communication is possible. 
 
 
 
