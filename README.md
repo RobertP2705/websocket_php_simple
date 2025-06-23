@@ -1,292 +1,126 @@
-# WebSocket Chat Server
+# PHP WebSocket Server with Database Integration
 
-NO HEAVY WEBSOCKET LIBRARY REQUIRED. A lightweight, production-ready WebSocket server implementation in PHP 8 for real-time communication. Under the hood we are doing a reverse proxy (Apache) from https to localhost and down-grading the wss connection to simplify requirements for the connection. Has chat.php to test out chat feature but any bidirectional communication is possible. 
-
-
+A lightweight, production-ready WebSocket server in PHP 8 for real-time communication and live database monitoring. No heavy libraries required.
 
 ## Features
 
-- **Real-time messaging** - Instant bidirectional communication
-- **PHP 8 compatible** - Optimized for modern PHP versions
-- **Multi-user support** - Handle multiple simultaneous connections
-- **Apache integration** - Reverse proxy support with SSL termination
-- **Production ready** - Built for CentOS 9 enterprise environments
+- **Real-time messaging** and live database table monitoring
+- **MySQL/MariaDB integration** (see `config.php`)
+- **Multi-user support** with table subscriptions
+- **Production ready**: works behind Apache/Nginx reverse proxy
+- **Sample HTML/JS client** included for easy testing
 
 ## Requirements
 
-- CentOS 9 / RHEL 9
-- PHP 8.0+
-- Apache 2.4+
-- php-sockets extension
-- Root/sudo access for setup
+- PHP 8.0+ with `php-sockets` and `pdo_mysql`
+- MySQL or MariaDB
+- Apache/Nginx (for reverse proxy, optional)
+- Linux or Windows
 
-## Installation
+## Quick Start
 
-### 1. Install PHP and Dependencies
-
-```bash
-sudo dnf update -y
-sudo dnf install -y php php-cli php-sockets httpd
-sudo systemctl enable httpd
-sudo systemctl start httpd
-```
-
-### 2. Clone Repository
+### 1. Clone and Configure
 
 ```bash
-cd /var/www/html
-sudo git clone https://github.com/yourusername/websocket-chat-server.git
-sudo chown -R apache:apache websocket-chat-server
-sudo chmod +x websocket-chat-server/server.php
+git clone https://github.com/yourusername/websocket-php-simple.git
+cd websocket-php-simple
+cp config.php.example config.php
+# Edit config.php with your database credentials
 ```
 
-### 3. Configure Apache Modules
+### 2. Set Up Database
+
+Create a database (e.g., `websocket_demo`) and user, then import or let the server create the tables (`items`, `conductors`) as needed.
+
+### 3. Start the WebSocket Server
 
 ```bash
-sudo dnf install -y httpd-devel
-sudo httpd -M | grep -E "(rewrite|proxy)"
-```
-
-Enable required modules in `/etc/httpd/conf/httpd.conf`:
-```apache
-LoadModule rewrite_module modules/mod_rewrite.so
-LoadModule proxy_module modules/mod_proxy.so  
-LoadModule proxy_http_module modules/mod_proxy_http.so
-LoadModule proxy_wstunnel_module modules/mod_proxy_wstunnel.so
-```
-
-### 4. Configure SELinux
-
-```bash
-sudo setsebool -P httpd_can_network_connect 1
-sudo setsebool -P httpd_can_network_relay 1
-```
-
-### 5. Configure Firewall
-
-```bash
-sudo firewall-cmd --permanent --add-port=9000/tcp
-sudo firewall-cmd --permanent --add-service=http
-sudo firewall-cmd --permanent --add-service=https
-sudo firewall-cmd --reload
-```
-
-## Usage
-
-### Start WebSocket Server
-
-```bash
-cd /var/www/html/websocket-chat-server
 php server.php
 ```
 
-### Access Chat Interface
+### 4. Try the Demo Client
 
-Open your browser and navigate to:
-```
-http://your-server-ip/websocket-chat-server/chat.php
-```
+Open `demo-client.html` in your browser (see below for code).
 
-### Test Direct WebSocket Connection
+## WebSocket API
 
-```bash
-curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
-     -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: test" \
-     http://localhost:9000/
-```
+- `subscribe` to a table:  
+  `{ "action": "subscribe", "table": "items" }`
+- `unsubscribe` from a table:  
+  `{ "action": "unsubscribe", "table": "items" }`
+- Receive real-time updates when the table changes.
 
-## Production Deployment
+## Demo Client
 
-### Create Systemd Service
+A simple HTML+JS client for testing:
 
-Create `/etc/systemd/system/websocket-chat.service`:
-
-```ini
-[Unit]
-Description=WebSocket Chat Server
-After=network.target
-Wants=network.target
-
-[Service]
-Type=simple
-User=apache
-Group=apache
-WorkingDirectory=/var/www/html/websocket-chat-server
-ExecStart=/usr/bin/php server.php
-Restart=always
-RestartSec=3
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start service:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable websocket-chat.service
-sudo systemctl start websocket-chat.service
-sudo systemctl status websocket-chat.service
-```
-
-### Monitor Service
-
-```bash
-sudo journalctl -u websocket-chat.service -f
-sudo systemctl status websocket-chat.service
-```
-
-## Configuration
-
-### Server Configuration
-
-Edit `config.php` to customize settings:
-
-```php
-$config = [
-    'host' => 'localhost',
-    'port' => 9000,
-    'max_connections' => 100,
-    'buffer_length' => 2048
-];
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WebSocket PHP Simple Demo</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    #log { border: 1px solid #ccc; padding: 1em; height: 300px; overflow-y: auto; background: #f9f9f9; }
+    input, button { font-size: 1em; }
+  </style>
+</head>
+<body>
+  <h2>WebSocket PHP Simple Demo Client</h2>
+  <div>
+    <label>Table to subscribe: <input id="table" value="items"></label>
+    <button onclick="subscribe()">Subscribe</button>
+    <button onclick="unsubscribe()">Unsubscribe</button>
+  </div>
+  <div id="log"></div>
+  <script>
+    const log = msg => {
+      document.getElementById('log').innerHTML += msg + '<br>';
+    };
+    let ws;
+    function connect() {
+      ws = new WebSocket('ws://localhost:9000');
+      ws.onopen = () => log('<b>Connected</b>');
+      ws.onmessage = e => log('<span style="color:green">' + e.data + '</span>');
+      ws.onclose = () => log('<b>Disconnected</b>');
+      ws.onerror = e => log('<span style="color:red">Error</span>');
+    }
+    function subscribe() {
+      if (!ws || ws.readyState !== 1) connect();
+      ws.onopen = () => {
+        log('<b>Connected</b>');
+        ws.send(JSON.stringify({action: 'subscribe', table: document.getElementById('table').value}));
+      };
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify({action: 'subscribe', table: document.getElementById('table').value}));
+      }
+    }
+    function unsubscribe() {
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({action: 'unsubscribe', table: document.getElementById('table').value}));
+      }
+    }
+    connect();
+  </script>
+</body>
+</html>
 ```
 
-### Apache Virtual Host
+## Security
 
-For production with SSL, create `/etc/httpd/conf.d/websocket.conf`:
-
-```apache
-<VirtualHost *:80>
-    ServerName your-domain.com
-    DocumentRoot /var/www/html/websocket-chat-server
-    
-    RewriteEngine On
-    RewriteCond %{HTTP:Upgrade} websocket [NC]
-    RewriteCond %{HTTP:Connection} upgrade [NC]
-    RewriteRule websocket$ ws://127.0.0.1:9000/ [P,L]
-    
-    <Directory "/var/www/html/websocket-chat-server">
-        AllowOverride All
-        Require all granted
-    </Directory>
-</VirtualHost>
-```
-
-## File Structure
-
-```
-websocket-chat-server/
-├── server.php          # Main WebSocket server
-├── websockets.php      # WebSocket protocol implementation
-├── users.php          # User management classes
-├── config.php         # Configuration settings
-├── chat.php           # Modern chat interface demo
-├── .htaccess          # Apache proxy rules
-└── README.md          # This file
-```
-
-## Architecture
-
-```
-Browser Client (WebSocket) → Apache (Reverse Proxy) → PHP WebSocket Server
-                             ↓
-                     SSL Termination & Load Balancing
-```
-
-## Troubleshooting
-
-### Connection Issues
-
-```bash
-netstat -an | grep :9000
-ps aux | grep server.php
-sudo tail -f /var/log/httpd/error_log
-```
-
-### Permission Issues
-
-```bash
-sudo chown -R apache:apache /var/www/html/websocket-chat-server
-sudo chmod +x server.php
-```
-
-### SELinux Issues
-
-```bash
-sudo ausearch -m avc -ts recent
-sudo setsebool -P httpd_can_network_connect 1
-```
-
-### Service Management
-
-```bash
-sudo systemctl restart websocket-chat.service
-sudo systemctl status websocket-chat.service
-sudo journalctl -u websocket-chat.service --no-pager
-```
-
-## Performance Tuning
-
-### PHP Configuration
-
-Add to `/etc/php.ini`:
-```ini
-memory_limit = 256M
-max_execution_time = 0
-default_socket_timeout = 60
-```
-
-### Apache Configuration
-
-Add to `/etc/httpd/conf/httpd.conf`:
-```apache
-MaxRequestWorkers 400
-ThreadsPerChild 25
-ServerLimit 16
-```
-
-### System Limits
-
-Add to `/etc/security/limits.conf`:
-```
-apache soft nofile 65536
-apache hard nofile 65536
-```
-
-## API Reference
-
-### Server Methods
-
-- `process($user, $message)` - Handle incoming messages
-- `connected($user)` - Called when user connects
-- `closed($user)` - Called when user disconnects
-- `send($user, $message)` - Send message to specific user
-
-### Client JavaScript API
-
-```javascript
-const socket = new WebSocket('ws://localhost:9000');
-socket.onopen = () => console.log('Connected');
-socket.onmessage = (event) => console.log(event.data);
-socket.send('Hello Server!');
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+- Change all default credentials before deploying publicly.
 
 ## License
 
-MIT License
+MIT
 
-## Support
+---
 
-- Create GitHub issues for bugs
-- Check system logs for troubleshooting
-- Verify all requirements are installed
-- Test with direct WebSocket connection first 
+## 3. Save the Demo Client
+
+Create a file named `demo-client.html` in your `websocket_php_simple/` directory and paste the HTML code above.
+
+---
+
+If you need further customization or want a more advanced client, just let me know!
