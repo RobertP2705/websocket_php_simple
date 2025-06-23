@@ -5,7 +5,7 @@ A lightweight, production-ready WebSocket server in PHP 8 for real-time communic
 ## Features
 
 - **Real-time messaging** and live database table monitoring
-- **MySQL/MariaDB integration** (see `config.php`)
+- **SQL Server integration** (see `config.php`)
 - **Multi-user support** with table subscriptions
 - **Production ready**: works behind Apache/Nginx reverse proxy
 - **Sample HTML/JS client** included for easy testing
