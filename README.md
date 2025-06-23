@@ -30,7 +30,7 @@ cp config.php.example config.php
 
 ### 2. Set Up Database
 
-Create a database (e.g., `websocket_demo`) and user, then import or let the server create the tables (`items`, `conductors`) as needed.
+Will differ based on what DB you use. Just make sure ur config returns a PDO object, lmk if you need help with this.
 
 ### 3. Start the WebSocket Server
 
