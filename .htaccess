@@ -1,0 +1,7 @@
+# Enable rewrite engine
+RewriteEngine On
+
+# WebSocket proxy configuration - match any path ending with "websocket"
+RewriteCond %{HTTP:Upgrade} websocket [NC]
+RewriteCond %{HTTP:Connection} upgrade [NC]
+RewriteRule websocket$ ws://127.0.0.1:9000/ [P,L] 
